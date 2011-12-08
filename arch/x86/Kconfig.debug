@@ -313,4 +313,6 @@ config X86_DEBUG_STATIC_CPU_HAS
 
 	  If unsure, say N.
 
+source "kernel/dwarf_unwind/Kconfig"
+
 endmenu
