@@ -312,5 +312,6 @@ config X86_DEBUG_STATIC_CPU_HAS
 	  run.
 
 	  If unsure, say N.
+source "kernel/dwarf_unwind/Kconfig"
 
 endmenu

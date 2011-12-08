@@ -1,0 +1,6 @@
+
+config DWARF_UNWIND
+	bool "Use compiler information to unwind the stack."
+	---help---
+	  Adding code allowing to use compiled debug data
+	  for stack unwinding.
