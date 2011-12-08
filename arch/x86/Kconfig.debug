@@ -318,4 +318,6 @@ config DEBUG_NMI_SELFTEST
 
 	  If unsure, say N.
 
+source "kernel/dwarf_unwind/Kconfig"
+
 endmenu
