@@ -19,6 +19,12 @@ struct du_frames {
 #ifdef CONFIG_DWARF_UNWIND_EH_FRAMES
 	u8 *instr;
 #endif
+
+#ifdef CONFIG_DWARF_UNWIND_DEBUGFS
+	struct dentry *d_mod;
+	struct dentry *d_cie;
+	struct dentry *d_fde;
+#endif
 };
 
 struct du_frame {
@@ -26,6 +32,10 @@ struct du_frame {
 
 	u16      ilen;
 	u8      *icode;
+
+#ifdef CONFIG_DWARF_UNWIND_DEBUGFS
+	unsigned long	 offset;
+#endif
 };
 
 struct du_cie {
