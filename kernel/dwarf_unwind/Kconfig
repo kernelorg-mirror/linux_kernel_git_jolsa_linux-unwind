@@ -7,3 +7,9 @@ config DWARF_UNWIND
 
 config DWARF_UNWIND_EH_FRAMES
 	def_bool DWARF_UNWIND
+
+config DWARF_UNWIND_DEBUGFS
+	bool "The debugfs dwarf frames interface."
+	depends on DWARF_UNWIND
+	---help---
+	  The debugfs dwarf frames interface
