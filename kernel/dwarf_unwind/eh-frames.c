@@ -87,6 +87,10 @@ static int parse_entry_cie(struct du_frames *frames, int *ilen,
 		}
 	}
 
+#ifdef CONFIG_DWARF_UNWIND_DEBUGFS
+	cie.frame.offset = entry->start - entry->entries_start;
+#endif
+
 	cie.frame.icode = p;
 	cie.frame.ilen  = end - p;
 
@@ -110,6 +114,10 @@ static int __parse_entry_fde(struct du_frames *frames, int *ilen,
 
 	if (cie->aug_z)
 		DU_READ_ULEB128(p, end);
+
+#ifdef CONFIG_DWARF_UNWIND_DEBUGFS
+	fde.frame.offset = entry->start - entry->entries_start;
+#endif
 
 	fde.frame.icode = p;
 	fde.frame.ilen  = end - p;
