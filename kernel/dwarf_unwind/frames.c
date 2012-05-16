@@ -4,6 +4,7 @@
 #include <linux/rbtree.h>
 #include <linux/slab.h>
 #include <linux/hash.h>
+#include <linux/debugfs.h>
 #include "internal.h"
 
 static LIST_HEAD(frames_list);
@@ -195,6 +196,222 @@ struct du_fde *du_fde_lookup(struct du_frames *frames, unsigned long addr)
 	return frame ? container_of(frame, struct du_fde, frame) : NULL;
 }
 
+#ifdef CONFIG_DWARF_UNWIND_DEBUGFS
+static void *frames_first(struct seq_file *m)
+{
+	struct rb_root *rb_root = m->private;
+	return rb_first(rb_root);
+}
+
+static void *frames_next(struct seq_file *m, void *p, loff_t *pos)
+{
+	(*pos)++;
+
+	if (p == SEQ_START_TOKEN)
+		p = frames_first(m);
+
+	return rb_next(p);
+}
+
+static void *frames_start(struct seq_file *m, loff_t *pos)
+{
+	void *p;
+	loff_t l;
+
+	if (!*pos)
+		return SEQ_START_TOKEN;
+
+	for (p = frames_first(m), l = 1; l < *pos; ) {
+		p = frames_next(m, p, &l);
+		if (!p)
+			break;
+	}
+
+	return p;
+}
+
+static void frames_stop(struct seq_file *m, void *p)
+{
+}
+
+static void seq_printf_hexdump(struct seq_file *m, u8 *p, int len)
+{
+	int i;
+
+	for (i = 0; i < len; i++, p++)
+		seq_printf(m, "%02x ", *p & 0xff);
+}
+
+static int frames_cie(struct seq_file *m, void *p)
+{
+	struct du_cie *cie = rb_entry(p, struct du_cie, frame.rb_node);
+
+	if (p == SEQ_START_TOKEN)
+		seq_printf(m, "%20s %20s %5s %3s %3s %2s %2s %5s | %-s\n",
+			   "offset", "address", "aug_z", "enc", "ret",
+			   "ac", "ad", "len", "code");
+	else {
+		seq_printf(m, "%20lx %20p %5x %3x %3x %2x %2x %5d | ",
+			   cie->frame.offset,
+			   cie->addr,
+			   cie->aug_z,
+			   cie->encoding,
+			   cie->ret_addr_column,
+			   cie->align_code & 0xff,
+			   cie->align_data & 0xff,
+			   cie->frame.ilen);
+
+		seq_printf_hexdump(m, cie->frame.icode, cie->frame.ilen);
+		seq_printf(m, "\n");
+	}
+
+	return 0;
+}
+
+static int frames_fde(struct seq_file *m, void *p)
+{
+	struct du_fde *fde = rb_entry(p, struct du_fde, frame.rb_node);
+
+	if (p == SEQ_START_TOKEN)
+		seq_printf(m, "%20s %20s %20s %20s %20s %5s | %-s\n",
+			   "offset", "address", "cie", "start",
+			   "end", "len", "code");
+	else {
+		struct du_cie *cie = fde->cie;
+
+		seq_printf(m, "%20lx %20p %20p %20p %20p %5d | ",
+			   fde->frame.offset,
+			   fde,
+			   cie->addr,
+			   fde->loc_start,
+			   fde->loc_end,
+			   fde->frame.ilen);
+
+		seq_printf_hexdump(m, fde->frame.icode, fde->frame.ilen);
+		seq_printf(m, "\n");
+	}
+
+	return 0;
+}
+
+static const struct seq_operations cie_seq_ops = {
+	.start          = frames_start,
+	.next           = frames_next,
+	.stop           = frames_stop,
+	.show           = frames_cie,
+};
+
+static const struct seq_operations fde_seq_ops = {
+	.start          = frames_start,
+	.next           = frames_next,
+	.stop           = frames_stop,
+	.show           = frames_fde,
+};
+
+static int frames_open(struct inode *inode, struct file *file,
+		       const struct seq_operations *seq_ops)
+{
+	int ret;
+
+	ret = seq_open(file, seq_ops);
+	if (!ret) {
+		struct seq_file *m = file->private_data;
+		m->private = inode->i_private;
+        }
+
+	return ret;
+}
+
+static int frames_open_cie(struct inode *inode, struct file *file)
+{
+	return frames_open(inode, file, &cie_seq_ops);
+}
+
+static int frames_open_fde(struct inode *inode, struct file *file)
+{
+	return frames_open(inode, file, &fde_seq_ops);
+}
+
+static const struct file_operations frames_ops_cie = {
+	.open           = frames_open_cie,
+	.read           = seq_read,
+	.llseek         = seq_lseek,
+	.release        = seq_release,
+};
+
+static const struct file_operations frames_ops_fde = {
+	.open           = frames_open_fde,
+	.read           = seq_read,
+	.llseek         = seq_lseek,
+	.release        = seq_release,
+};
+
+static void debugfs_release(struct du_frames *frames)
+{
+	debugfs_remove(frames->d_mod);
+	debugfs_remove(frames->d_cie);
+	debugfs_remove(frames->d_fde);
+}
+
+static struct dentry *debugfs_d_frames(void)
+{
+	static struct dentry *d_frames;
+
+	if (!d_frames)
+		d_frames = debugfs_create_dir("unwind_frames", NULL);
+
+	return d_frames;
+}
+
+static const char *mod_name(struct du_frames *frames)
+{
+	struct module *mod = frames->mod;
+	return mod ? mod->name : "vmlinux";
+}
+
+static int debugfs_init(struct du_frames *frames)
+{
+	struct dentry *d_frames;
+	struct dentry *d_mod, *d_cie, *d_fde;
+
+	d_frames = debugfs_d_frames();
+	if (!d_frames)
+		return -EINVAL;
+
+	d_mod = debugfs_create_dir(mod_name(frames), d_frames);
+	if (!d_mod)
+		return -EINVAL;
+
+	d_cie = debugfs_create_file("cie", 0644, d_mod,
+				    &frames->rb_root_cie,
+				    &frames_ops_cie);
+	d_fde = debugfs_create_file("fde", 0644, d_mod,
+				    &frames->rb_root_fde,
+				    &frames_ops_fde);
+	if (!d_cie || !d_fde)
+		goto err;
+
+	frames->d_mod = d_mod;
+	frames->d_cie = d_cie;
+	frames->d_fde = d_fde;
+	return 0;
+
+ err:
+	debugfs_release(frames);
+	return -EINVAL;
+}
+#else
+static int debugfs_init(struct du_frames *frames)
+{
+	return 0;
+}
+
+static int debugfs_release(struct du_frames *frames)
+{
+	return 0;
+}
+#endif /* CONFIG_DWARF_UNWIND_DEBUGFS */
+
 #ifdef CONFIG_DWARF_UNWIND_EH_FRAMES
 static int frames_source_init(struct du_frames *frames)
 {
@@ -218,10 +435,19 @@ static void frames_source_release(struct du_frames *frames)
 
 static int __frames_init(struct du_frames *frames)
 {
+	int ret;
+
 	frames->kmem_cie = KMEM_CACHE(du_cie, SLAB_PANIC);
 	frames->kmem_fde = KMEM_CACHE(du_fde, SLAB_PANIC);
 
-	return frames_source_init(frames);
+	ret = frames_source_init(frames);
+	if (ret)
+		goto out;
+
+	ret = debugfs_init(frames);
+
+ out:
+	return ret;
 }
 
 static int frames_init(struct module *mod)
@@ -256,6 +482,7 @@ static int frames_init(struct module *mod)
 
 static void frames_free(struct du_frames *frames)
 {
+	debugfs_release(frames);
 	frames_source_release(frames);
 
 	kmem_cache_destroy(frames->kmem_cie);
