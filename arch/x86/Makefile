@@ -138,8 +138,13 @@ LDFLAGS := -m elf_$(UTS_MACHINE)
 KBUILD_CFLAGS += -pipe
 # Workaround for a gcc prelease that unfortunately was shipped in a suse release
 KBUILD_CFLAGS += -Wno-sign-compare
-#
+# Have exception header frames generated for dwarf stack unwind
+ifdef CONFIG_DWARF_UNWIND_EH_FRAMES
+KBUILD_CFLAGS += -funwind-tables
+else
 KBUILD_CFLAGS += -fno-asynchronous-unwind-tables
+endif
+
 # prevent gcc from generating any FP code by mistake
 KBUILD_CFLAGS += $(call cc-option,-mno-sse -mno-mmx -mno-sse2 -mno-3dnow,)
 KBUILD_CFLAGS += $(call cc-option,-mno-avx,)
