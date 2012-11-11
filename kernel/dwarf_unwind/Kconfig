@@ -4,3 +4,6 @@ config DWARF_UNWIND
 	---help---
 	  Adding code allowing to use compiled debug data
 	  for stack unwinding.
+
+config DWARF_UNWIND_EH_FRAMES
+	def_bool DWARF_UNWIND
