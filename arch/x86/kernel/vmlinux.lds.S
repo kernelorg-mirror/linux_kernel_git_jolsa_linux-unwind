@@ -191,6 +191,9 @@ SECTIONS
 	:init
 #endif
 
+	/* Exception frames */
+	EH_FRAME
+
 	INIT_DATA_SECTION(16)
 
 	.x86_cpu_dev.init : AT(ADDR(.x86_cpu_dev.init) - LOAD_OFFSET) {
@@ -319,7 +322,9 @@ SECTIONS
 
 	/* Sections to be discarded */
 	DISCARDS
+#ifndef CONFIG_DWARF_UNWIND_EH_FRAMES
 	/DISCARD/ : { *(.eh_frame) }
+#endif
 }
 
 
