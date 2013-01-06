@@ -103,6 +103,8 @@ obj-$(CONFIG_UPROBES)			+= uprobes.o
 
 obj-$(CONFIG_PERF_EVENTS)		+= perf_regs.o
 
+obj-$(CONFIG_DWARF_UNWIND)		+= dwarf_unwind/
+
 ###
 # 64 bit specific files
 ifeq ($(CONFIG_X86_64),y)
