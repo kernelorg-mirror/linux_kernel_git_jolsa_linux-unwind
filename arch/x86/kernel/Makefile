@@ -112,6 +112,8 @@ obj-$(CONFIG_EFI)			+= sysfb_efi.o
 obj-$(CONFIG_PERF_EVENTS)		+= perf_regs.o
 obj-$(CONFIG_TRACING)			+= tracepoint.o
 
+obj-$(CONFIG_DWARF_UNWIND)		+= dwarf_unwind/
+
 ###
 # 64 bit specific files
 ifeq ($(CONFIG_X86_64),y)
