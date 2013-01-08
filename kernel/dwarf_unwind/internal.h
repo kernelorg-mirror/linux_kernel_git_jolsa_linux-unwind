@@ -15,6 +15,10 @@ struct du_frames {
 	struct rb_root          rb_root_fde;
 
 	atomic_t		refcount;
+
+#ifdef CONFIG_DWARF_UNWIND_EH_FRAMES
+	u8 *instr;
+#endif
 };
 
 struct du_frame {
@@ -57,6 +61,7 @@ extern unsigned int dwarf_unwind_debug;
 enum {
 	DU_DEBUG_READ		= 1U << 0,
 	DU_DEBUG_FRAMES		= 1U << 1,
+	DU_DEBUG_EH_FRAMES	= 1U << 2,
 };
 
 #define DU_DEBUG(mask, fmt, args...)				\
@@ -70,6 +75,7 @@ do {								\
 
 #define DU_DEBUG_READ(fmt, args...)		DU_DEBUG(READ, fmt, ## args)
 #define DU_DEBUG_FRAMES(fmt, args...)		DU_DEBUG(FRAMES, fmt, ## args)
+#define DU_DEBUG_EH_FRAMES(fmt, args...)	DU_DEBUG(EH_FRAMES, fmt, ## args)
 
 int du_read_uleb128(u8 **p, u8 *end, u64 *val);
 int du_read_sleb128(u8 **p, u8 *end, s64 *val);
@@ -123,5 +129,10 @@ char *du_read_str(u8 **p, u8 *end);
 	}								\
 	__c;								\
 	})
+
+#ifdef CONFIG_DWARF_UNWIND_EH_FRAMES
+int  du_ehframe_init(struct du_frames *frames);
+void du_ehframe_release(struct du_frames *frames);
+#endif /* CONFIG_DWARF_UNWIND_EH_FRAMES */
 
 #endif /* DWARF_UNWIND_INTERNAL_H */
