@@ -114,6 +114,7 @@ enum {
 	DU_DEBUG_EH_FRAMES	= 1U << 2,
 	DU_DEBUG_CFI		= 1U << 3,
 	DU_DEBUG_EXPR		= 1U << 4,
+	DU_DEBUG_UNWIND		= 1U << 5,
 };
 
 #define DU_DEBUG(mask, fmt, args...)				\
@@ -130,6 +131,8 @@ do {								\
 #define DU_DEBUG_EH_FRAMES(fmt, args...)	DU_DEBUG(EH_FRAMES, fmt, ## args)
 #define DU_DEBUG_CFI(fmt, args...)		DU_DEBUG(CFI, fmt, ## args)
 #define DU_DEBUG_EXPR(fmt, args...)		DU_DEBUG(EXPR, fmt, ## args)
+#define DU_DEBUG_UNWIND(fmt, args...)		DU_DEBUG(UNWIND, fmt, ## args)
+
 
 int du_read_uleb128(u8 **p, u8 *end, u64 *val);
 int du_read_sleb128(u8 **p, u8 *end, s64 *val);
