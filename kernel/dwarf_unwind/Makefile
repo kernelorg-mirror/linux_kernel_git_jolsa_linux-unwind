@@ -1,1 +1,1 @@
-obj-y += unwind.o read.o
+obj-y += unwind.o read.o frames.o

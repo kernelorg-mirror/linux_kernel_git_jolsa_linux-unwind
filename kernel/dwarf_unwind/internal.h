@@ -1,10 +1,62 @@
 #ifndef DWARF_UNWIND_INTERNAL_H
 #define DWARF_UNWIND_INTERNAL_H
 
+#include <linux/slab.h>
+#include <linux/rbtree.h>
+
+struct du_frames {
+	struct module           *mod;
+	struct list_head        list;
+
+	struct kmem_cache       *kmem_cie;
+	struct kmem_cache       *kmem_fde;
+
+	struct rb_root          rb_root_cie;
+	struct rb_root          rb_root_fde;
+
+	atomic_t		refcount;
+};
+
+struct du_frame {
+	struct rb_node rb_node;
+
+	u16      ilen;
+	u8      *icode;
+};
+
+struct du_cie {
+	struct du_frame frame;
+
+	u8	*addr;
+	u8	 encoding;
+	u8	 ret_addr_column;
+	u8	 align_code;
+	s8	 align_data;
+
+	bool	 aug_z;
+};
+
+struct du_fde {
+	struct du_frame frame;
+
+	struct du_cie 	*cie;
+	u8		*loc_start;
+	u8		*loc_end;
+};
+
+int du_cie_add(struct du_frames *frames, struct du_cie *cie);
+int du_fde_add(struct du_frames *frames, struct du_fde *fde);
+
+struct du_fde *du_fde_lookup(struct du_frames *frames, unsigned long addr);
+struct du_cie* du_cie_lookup(struct du_frames *frames, u8 *addr);
+void du_frames_put(struct du_frames *frames);
+struct du_frames* du_frames_find(struct module *mod);
+
 extern unsigned int dwarf_unwind_debug;
 
 enum {
 	DU_DEBUG_READ		= 1U << 0,
+	DU_DEBUG_FRAMES		= 1U << 1,
 };
 
 #define DU_DEBUG(mask, fmt, args...)				\
@@ -17,6 +69,7 @@ do {								\
 } while (0)
 
 #define DU_DEBUG_READ(fmt, args...)		DU_DEBUG(READ, fmt, ## args)
+#define DU_DEBUG_FRAMES(fmt, args...)		DU_DEBUG(FRAMES, fmt, ## args)
 
 int du_read_uleb128(u8 **p, u8 *end, u64 *val);
 int du_read_sleb128(u8 **p, u8 *end, s64 *val);
