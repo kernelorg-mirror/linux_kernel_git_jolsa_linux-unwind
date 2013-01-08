@@ -195,6 +195,17 @@ struct du_fde *du_fde_lookup(struct du_frames *frames, unsigned long addr)
 	return frame ? container_of(frame, struct du_fde, frame) : NULL;
 }
 
+#ifdef CONFIG_DWARF_UNWIND_EH_FRAMES
+static int frames_source_init(struct du_frames *frames)
+{
+	return du_ehframe_init(frames);
+}
+
+static void frames_source_release(struct du_frames *frames)
+{
+	du_ehframe_release(frames);
+}
+#else
 static int frames_source_init(struct du_frames *frames)
 {
 	return -ENODEV;
@@ -203,6 +214,7 @@ static int frames_source_init(struct du_frames *frames)
 static void frames_source_release(struct du_frames *frames)
 {
 }
+#endif /* CONFIG_DWARF_UNWIND_EH_FRAMES */
 
 static int __frames_init(struct du_frames *frames)
 {
