@@ -98,6 +98,9 @@ struct du_state {
 int du_cfi(struct du_fde *fde, struct du_state *state,
 	       unsigned long ip, struct du_frame *frame);
 
+int du_expr(struct du_regs *regs, u8 *addr, unsigned long len,
+	    unsigned long *pval);
+
 struct du_fde *du_fde_lookup(struct du_frames *frames, unsigned long addr);
 struct du_cie* du_cie_lookup(struct du_frames *frames, u8 *addr);
 void du_frames_put(struct du_frames *frames);
@@ -110,6 +113,7 @@ enum {
 	DU_DEBUG_FRAMES		= 1U << 1,
 	DU_DEBUG_EH_FRAMES	= 1U << 2,
 	DU_DEBUG_CFI		= 1U << 3,
+	DU_DEBUG_EXPR		= 1U << 4,
 };
 
 #define DU_DEBUG(mask, fmt, args...)				\
@@ -125,6 +129,7 @@ do {								\
 #define DU_DEBUG_FRAMES(fmt, args...)		DU_DEBUG(FRAMES, fmt, ## args)
 #define DU_DEBUG_EH_FRAMES(fmt, args...)	DU_DEBUG(EH_FRAMES, fmt, ## args)
 #define DU_DEBUG_CFI(fmt, args...)		DU_DEBUG(CFI, fmt, ## args)
+#define DU_DEBUG_EXPR(fmt, args...)		DU_DEBUG(EXPR, fmt, ## args)
 
 int du_read_uleb128(u8 **p, u8 *end, u64 *val);
 int du_read_sleb128(u8 **p, u8 *end, s64 *val);
