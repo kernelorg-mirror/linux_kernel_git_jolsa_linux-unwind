@@ -342,3 +342,45 @@ int dwarf_unwind(struct pt_regs *regs, dwarf_unwind_cb cb, void *data)
 
 	return ret;
 }
+
+static ssize_t
+test_write(struct file *filp, const char __user *ubuf,
+	   size_t cnt, loff_t *ppos)
+{
+	printk("Testing dwarf unwind from process context.\n");
+
+	if (dwarf_unwind_debug) {
+		printk("Dwarf unwind debug enabled: ");
+
+		if (dwarf_unwind_debug & DU_DEBUG_READ)
+			printk("read ");
+		if (dwarf_unwind_debug & DU_DEBUG_FRAMES)
+			printk("frames ");
+		if (dwarf_unwind_debug & DU_DEBUG_EH_FRAMES)
+			printk("eh-frames ");
+		if (dwarf_unwind_debug & DU_DEBUG_CFI)
+			printk("cfi ");
+		if (dwarf_unwind_debug & DU_DEBUG_EXPR)
+			printk("expr");
+
+		printk("\n");
+	}
+
+	dump_stack();
+	return cnt;
+}
+
+static const struct file_operations test_fops = {
+	.write = test_write,
+};
+
+static int __init unwind_init_test(void)
+{
+	if (!debugfs_create_file("unwind_test", 0644, NULL, NULL,
+				 &test_fops))
+		return -ENOMEM;
+
+	return 0;
+}
+
+late_initcall(unwind_init_test);
