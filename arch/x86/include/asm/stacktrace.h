@@ -47,6 +47,12 @@ void dump_trace(struct task_struct *tsk, struct pt_regs *regs,
 		unsigned long *stack, unsigned long bp,
 		const struct stacktrace_ops *ops, void *data);
 
+#ifdef CONFIG_DWARF_UNWIND
+void dump_trace_dwarf(struct task_struct *task, struct pt_regs *regs,
+		      unsigned long *stack, unsigned long bp,
+		      const struct stacktrace_ops *ops, void *data);
+#endif
+
 #ifdef CONFIG_X86_32
 #define STACKSLOTS_PER_LINE 8
 #define get_bp(bp) asm("movl %%ebp, %0" : "=r" (bp) :)
