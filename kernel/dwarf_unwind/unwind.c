@@ -4,6 +4,7 @@
 #include <linux/ptrace.h>
 #include <linux/dwarf_unwind.h>
 #include <linux/uaccess.h>
+#include <linux/hardirq.h>
 #include <asm/dwarf_unwind_regs.h>
 #include "internal.h"
 
@@ -20,18 +21,76 @@ static void unwind_init(struct unwind *u, struct pt_regs *regs)
 	memcpy(&u->regs, regs, sizeof(*regs));
 }
 
-struct du_state *state_get(void)
-{
-	struct du_state *us;
+#define NR_CONTEXTS 3
 
-	/* TODO be smarter with allocation..  */
-	/* All ZEROs means initialized to DU_LOCATION_SAME */
-	return kzalloc(sizeof(*us), GFP_ATOMIC);
+struct state_cpu {
+	struct du_state state[NR_CONTEXTS];
+	int recursion[NR_CONTEXTS];
+};
+
+static DEFINE_PER_CPU(struct state_cpu, state_cpu);
+
+struct du_state *state_get(int *pctx)
+{
+	struct du_state *state;
+	int ctx = NR_CONTEXTS;
+
+	if (in_nmi())
+		ctx = 0;
+	else if (in_irq())
+		ctx = 1;
+	else if (in_softirq())
+		ctx = 2;
+
+	DU_DEBUG_UNWIND("ctx %d\n", ctx);
+
+	if (ctx < NR_CONTEXTS) {
+		struct state_cpu *st;
+
+		get_cpu();
+		st = &__get_cpu_var(state_cpu);
+
+		DU_DEBUG_UNWIND("recursion %d\n", st->recursion[ctx]);
+
+		if (st->recursion[ctx]) {
+			put_cpu();
+			return NULL;
+		}
+
+		st->recursion[ctx]++;
+	        barrier();
+
+		state = &st->state[ctx];
+		memset(state, 0x0, sizeof(*state));
+	} else
+		state = kzalloc(sizeof(*state), GFP_ATOMIC);
+
+	/*
+	 * Note zeroing du_state means initialized
+	 * to DU_LOCATION_SAME state.
+	 */
+
+	DU_DEBUG_UNWIND("state %p\n", state);
+
+	*pctx = ctx;
+	return state;
 }
 
-void state_put(struct du_state *us)
+void state_put(struct du_state *state, int ctx)
 {
-	kfree(us);
+	DU_DEBUG_UNWIND("ctx %d, state %p\n", ctx, state);
+
+	if (ctx < NR_CONTEXTS) {
+		struct state_cpu *st = &__get_cpu_var(state_cpu);
+
+		st->recursion[ctx]--;
+		barrier();
+
+		DU_DEBUG_UNWIND("recursion %d\n", st->recursion[ctx]);
+
+		put_cpu();
+	} else
+		kfree(state);
 }
 
 static int process_fde(struct du_fde *fde, struct du_state *state,
@@ -236,7 +295,7 @@ static int unwind_step(struct unwind *u)
 	struct du_frames *frames;
 	struct du_fde *fde;
 	struct du_state *state;
-	int ret = -EINVAL;
+	int ret = -EINVAL, ctx;
 
 	DU_DEBUG_UNWIND("addr 0x%lx\n", addr);
 
@@ -252,7 +311,7 @@ static int unwind_step(struct unwind *u)
 
 	DU_DEBUG_UNWIND("fde %p\n", fde);
 
-	state = state_get();
+	state = state_get(&ctx);
 	if (!state)
 		goto out_frames;
 
@@ -263,7 +322,7 @@ static int unwind_step(struct unwind *u)
 	ret = apply_state(u, state);
 
  out_state:
-	state_put(state);
+	state_put(state, ctx);
  out_frames:
 	du_frames_put(frames);
  out:
