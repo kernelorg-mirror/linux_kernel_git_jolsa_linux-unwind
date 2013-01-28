@@ -132,6 +132,25 @@ KERNEL_ATTR_RO(vmcoreinfo);
 
 #endif /* CONFIG_KEXEC */
 
+#ifdef CONFIG_DWARF_UNWIND
+__weak ssize_t backtrace_show(struct kobject *kobj,
+			      struct kobj_attribute *attr,
+			      char *buf)
+{
+	WARN(1, "backtrace switch not implemented\n");
+	return -ENODEV;
+}
+
+__weak ssize_t backtrace_store(struct kobject *kobj,
+			       struct kobj_attribute *attr,
+			       const char *buf, size_t count)
+{
+	WARN(1, "backtrace switch not implemented\n");
+	return -ENODEV;
+}
+KERNEL_ATTR_RW(backtrace);
+#endif
+
 /* whether file capabilities are enabled */
 static ssize_t fscaps_show(struct kobject *kobj,
 				  struct kobj_attribute *attr, char *buf)
@@ -197,6 +216,9 @@ static struct attribute * kernel_attrs[] = {
 	&vmcoreinfo_attr.attr,
 #endif
 	&rcu_expedited_attr.attr,
+#ifdef CONFIG_DWARF_UNWIND
+	&backtrace_attr.attr,
+#endif
 	NULL
 };
 
