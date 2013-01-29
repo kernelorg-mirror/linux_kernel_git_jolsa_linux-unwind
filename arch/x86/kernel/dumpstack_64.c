@@ -111,9 +111,9 @@ in_irq_stack(unsigned long *stack, unsigned long *irq_stack,
  * severe exception (double fault, nmi, stack fault, debug, mce) hardware stack
  */
 
-void dump_trace(struct task_struct *task, struct pt_regs *regs,
-		unsigned long *stack, unsigned long bp,
-		const struct stacktrace_ops *ops, void *data)
+void dump_trace_legacy(struct task_struct *task, struct pt_regs *regs,
+		       unsigned long *stack, unsigned long bp,
+		       const struct stacktrace_ops *ops, void *data)
 {
 	const unsigned cpu = get_cpu();
 	unsigned long *irq_stack_end =
@@ -194,7 +194,7 @@ void dump_trace(struct task_struct *task, struct pt_regs *regs,
 	bp = ops->walk_stack(tinfo, stack, bp, ops, data, NULL, &graph);
 	put_cpu();
 }
-EXPORT_SYMBOL(dump_trace);
+EXPORT_SYMBOL(dump_trace_legacy);
 
 void
 show_stack_log_lvl(struct task_struct *task, struct pt_regs *regs,
