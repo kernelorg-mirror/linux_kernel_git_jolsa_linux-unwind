@@ -43,9 +43,18 @@ struct stacktrace_ops {
 	walk_stack_t	walk_stack;
 };
 
-void dump_trace(struct task_struct *tsk, struct pt_regs *regs,
-		unsigned long *stack, unsigned long bp,
-		const struct stacktrace_ops *ops, void *data);
+typedef void (*dump_trace_t)(struct task_struct *tsk,
+			     struct pt_regs *regs,
+			     unsigned long *stack,
+			     unsigned long bp,
+			     const struct stacktrace_ops *ops,
+			     void *data);
+
+extern dump_trace_t dump_trace;
+
+void dump_trace_legacy(struct task_struct *tsk, struct pt_regs *regs,
+		       unsigned long *stack, unsigned long bp,
+		       const struct stacktrace_ops *ops, void *data);
 
 #ifdef CONFIG_DWARF_UNWIND
 void dump_trace_dwarf(struct task_struct *task, struct pt_regs *regs,
