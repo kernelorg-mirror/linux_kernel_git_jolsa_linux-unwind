@@ -348,4 +348,9 @@ extern int task_current_syscall(struct task_struct *target, long *callno,
 				unsigned long args[6], unsigned int maxargs,
 				unsigned long *sp, unsigned long *pc);
 
+#ifdef CONFIG_HAVE_REGS_LOAD
+extern void regs_load(struct pt_regs *regs);
+#else
+static inline void regs_load(struct pt_regs *regs) { }
+#endif /* CONFIG_HAVE_REGS_LOAD */
 #endif

@@ -452,4 +452,7 @@ config UCS2_STRING
 
 source "lib/fonts/Kconfig"
 
+config HAVE_REGS_LOAD
+	bool
+
 endmenu
