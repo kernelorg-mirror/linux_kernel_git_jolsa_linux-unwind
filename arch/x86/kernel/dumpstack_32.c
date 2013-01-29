@@ -17,9 +17,9 @@
 #include <asm/stacktrace.h>
 
 
-void dump_trace(struct task_struct *task, struct pt_regs *regs,
-		unsigned long *stack, unsigned long bp,
-		const struct stacktrace_ops *ops, void *data)
+void dump_trace_legacy(struct task_struct *task, struct pt_regs *regs,
+		       unsigned long *stack, unsigned long bp,
+		       const struct stacktrace_ops *ops, void *data)
 {
 	int graph = 0;
 
@@ -52,7 +52,7 @@ void dump_trace(struct task_struct *task, struct pt_regs *regs,
 		touch_nmi_watchdog();
 	}
 }
-EXPORT_SYMBOL(dump_trace);
+EXPORT_SYMBOL(dump_trace_legacy);
 
 void
 show_stack_log_lvl(struct task_struct *task, struct pt_regs *regs,
