@@ -73,7 +73,11 @@ static int efi_pstore_read_func(struct efivar_entry *entry, void *data)
 	} else
 		return 0;
 
-	__efivar_entry_size(entry, &size);
+	entry->var.DataSize = 1024;
+	__efivar_entry_get(entry, &entry->var.Attributes,
+			   &entry->var.DataSize, entry->var.Data);
+	size = entry->var.DataSize;
+
 	*cb_data->buf = kmalloc(size, GFP_KERNEL);
 	if (*cb_data->buf == NULL)
 		return -ENOMEM;
@@ -167,6 +171,8 @@ static int efi_pstore_erase_func(struct efivar_entry *entry, void *data)
 
 	/* found */
 	__efivar_entry_delete(entry);
+	list_del(&entry->list);
+
 	return 1;
 }
 
@@ -174,7 +180,7 @@ static int efi_pstore_erase(enum pstore_type_id type, u64 id, int count,
 			    struct timespec time, struct pstore_info *psi)
 {
 	struct pstore_erase_data edata;
-	struct efivar_entry *entry;
+	struct efivar_entry *entry = NULL;
 	char name[DUMP_NAME_LEN];
 	efi_char16_t efi_name[DUMP_NAME_LEN];
 	int found, i;
